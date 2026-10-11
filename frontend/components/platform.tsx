@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { FeatureWorkspace } from './feature-workspaces'
+import { CandidateWorkspace } from './candidate-workspace'
 import {
   ArrowRight, BarChart3, Bell, BookOpen, BriefcaseBusiness, Building2, Check, CheckCircle2,
   ChevronDown, ClipboardCheck, Clock3, FileText, GraduationCap, Heart, Languages, LayoutDashboard,
@@ -148,6 +149,15 @@ type JobPosting = {
   createdAt:string
   employer:{name:string;website:string;industry:string}
 }
+type EmployerApplication = {
+  id:string
+  status:string
+  coverNote:string
+  createdAt:string
+  updatedAt:string
+  job:{id:string;title:string;location:string;requiredSkills:string[]}|null
+  candidate:{fullName:string;email:string;phone:string;location:string;highestEducation:string;headline:string;skills:{name:string;proficiency:string}[]}|null
+}
 type ApiResponse<T> = T & {error?:string}
 
 function apiBaseUrl() {
@@ -177,6 +187,27 @@ async function apiRequest<T>(path:string,options:RequestInit={}):Promise<T> {
   return result
 }
 
+type RecentInterviewSession={id:string;jobRole:string;interviewType:string;status:string;createdAt:string;report:{overallScore:number|null}|null}
+function InterviewRecentResults() {
+  const [sessions,setSessions]=useState<RecentInterviewSession[]>([])
+  const [loading,setLoading]=useState(true)
+  const [error,setError]=useState('')
+  useEffect(()=>{
+    let active=true
+    apiRequest<{sessions:RecentInterviewSession[]}>('/interviews/sessions/mine').then(result=>{
+      if(active)setSessions(result.sessions)
+    }).catch(reason=>{
+      if(active)setError(reason instanceof Error?reason.message:'Unable to load recent interview reports.')
+    }).finally(()=>{
+      if(active)setLoading(false)
+    })
+    return ()=>{active=false}
+  },[])
+  return <section className="panel candidate-interview-results"><div className="panel-heading"><div><span className="eyebrow">Your interview history</span><h2>Recent Results</h2></div><Link href="/candidate/interview-prep">Start a mock interview <ArrowRight size={14}/></Link></div>
+    {loading?<p role="status">Loading your saved interview reports…</p>:error?<p className="interview-error" role="alert">{error}</p>:sessions.length?<div className="candidate-interview-result-list">{sessions.map(session=><Link href={`/candidate/interview-prep/results/${session.id}`} key={session.id}><span className="candidate-interview-result-icon"><MessageCircle size={16}/></span><span className="candidate-interview-result-copy"><b>{session.jobRole} · {session.interviewType}</b><small>{new Date(session.createdAt).toLocaleDateString()} · {session.status==='ended'?'Ended early':'Completed'}</small></span><strong>{session.report?.overallScore===null||session.report?.overallScore===undefined?'Not scored':`${session.report.overallScore}/100`}</strong><ArrowRight size={15}/></Link>)}</div>:<p className="candidate-interview-empty">Your completed mock-interview reports will appear here.</p>}
+  </section>
+}
+
 function formatDeadline(value:string) {
   return new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value))
 }
@@ -187,7 +218,7 @@ const providerLinks=[['Overview','/provider/dashboard',LayoutDashboard],['Upload
 
 function Sidebar({role,section}:{role:Role;section:string}) { const links=role==='candidate'?candidateLinks:role==='employer'?employerLinks:providerLinks; return <aside className="app-sidebar"><div className="sidebar-brand"><Logo/></div><div className="sidebar-scroll"><span className="sidebar-kicker">{role==='candidate'?'Candidate workspace':role==='employer'?'Recruiter workspace':'Training provider'}</span>{links.map(([label,url,I])=><Link className={section===label?'active':''} href={url} key={label}><I size={17}/><span>{label}</span></Link>)}</div><Link href="/" className="logout">Log out</Link></aside> }
 
-function AppHeader({role,employerName}:{role:Role;employerName?:string}) { const name=role==='candidate'?'Candidate':role==='employer'?employerName||'Employer':'Training Provider'; const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase(); return <header className="app-header"><Logo/><div className="app-search"><Search size={16}/><span>Search {role==='candidate'?'jobs by title, skills or company':'candidates, materials or roles'}...</span></div><div className="location-chip">⌖ All India <ChevronDown size={13}/></div><button className="icon-button" aria-label="Notifications"><Bell size={18}/><i>3</i></button><LanguageSelector/><div className="profile-chip"><span>{initials}</span><div><b>{name}</b><small>{role==='candidate'?'Job seeker':role==='employer'?'Recruiter':'Training Provider'}</small></div><ChevronDown size={13}/></div></header> }
+function AppHeader({role,employerName}:{role:Role;employerName?:string}) { const name=role==='candidate'?'Candidate':role==='employer'?employerName||'Employer':'Training Provider'; const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase(); return <header className="app-header"><Logo/><div className="app-search"><Search size={16}/><span>Search {role==='candidate'?'jobs by title, skills or company':'candidates, materials or roles'}...</span></div><div className="location-chip">⌖ All India <ChevronDown size={13}/></div><button className="icon-button" aria-label="Notifications"><Bell size={18}/></button><LanguageSelector/><div className="profile-chip"><span>{initials}</span><div><b>{name}</b><small>{role==='candidate'?'Job seeker':role==='employer'?'Recruiter':'Training Provider'}</small></div><ChevronDown size={13}/></div></header> }
 
 const jobs:[string,string,string,string,string,string[]][]=[['Software Developer (Fresher)','Tata Consultancy Services','Pune, Maharashtra','₹ 4 - 6 LPA','92% Match',['Python','JavaScript','React','SQL']],['Data Analyst','Accenture','Bengaluru, Karnataka','₹ 5 - 8 LPA','86% Match',['Excel','SQL','Power BI','Data Analysis']],['Junior Backend Developer','Infosys','Mysuru, Karnataka','₹ 4 - 7 LPA','78% Match',['Java','Spring Boot','SQL','APIs']]]
 function StatCards({role}:{role:Role}) { const stats=role==='candidate'?[['42','Eligible Opportunities','+12 new this week'],['18','Strong Matches','Above 80% match'],['5','Applications Submitted','2 under review'],['7','Skills to Improve','View skill gaps →']]:role==='employer'?[['5','Active Jobs','2 closing soon'],['248','Total Applications','+18 this week'],['180','Eligible Candidates','Across all roles'],['32','Shortlisted','Ready to review']]:[['25','Total Resources','Across 8 skills'],['18','Published','3 under review'],['4','Drafts','Continue editing'],['12K','Total Views','This quarter']]; return <div className="stat-grid">{stats.map(([n,t,s])=><div className="stat-card" key={t}><span className="stat-icon"><BriefcaseBusiness size={19}/></span><div><strong>{n}</strong><b>{t}</b><small>{s}</small></div></div>)}</div> }
@@ -197,27 +228,69 @@ function PublicJobListings() {
   const [jobs,setJobs]=useState<JobPosting[]>([])
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
+  const [savedJobsError,setSavedJobsError]=useState('')
   const [expandedJob,setExpandedJob]=useState<string|null>(null)
+  const [savedJobIds,setSavedJobIds]=useState<string[]>([])
+  const [busyJobId,setBusyJobId]=useState('')
+  const [actionMessage,setActionMessage]=useState('')
 
   useEffect(()=>{
     let active=true
-    apiRequest<{jobs:JobPosting[]}>('/jobs')
-      .then(result=>{if(active)setJobs(result.jobs)})
-      .catch(reason=>{if(active)setError(reason instanceof Error?reason.message:'Unable to load current job openings.')})
-      .finally(()=>{if(active)setLoading(false)})
+    Promise.allSettled([
+      apiRequest<{jobs:JobPosting[]}>('/jobs'),
+      apiRequest<{jobs:JobPosting[]}>('/candidate/saved-jobs'),
+    ]).then(([jobsResult,savedResult])=>{
+      if(!active)return
+      if(jobsResult.status==='fulfilled')setJobs(jobsResult.value.jobs)
+      else setError(jobsResult.reason instanceof Error?jobsResult.reason.message:'Unable to load current job openings.')
+      if(savedResult.status==='fulfilled')setSavedJobIds(savedResult.value.jobs.map(job=>job.id))
+      else setSavedJobsError(savedResult.reason instanceof Error?savedResult.reason.message:'Unable to load your saved jobs.')
+    }).finally(()=>{if(active)setLoading(false)})
     return ()=>{active=false}
   },[])
+
+  async function applyToJob(job:JobPosting) {
+    setBusyJobId(job.id)
+    setError('')
+    setActionMessage('')
+    try {
+      await apiRequest('/candidate/applications',{method:'POST',body:JSON.stringify({jobId:job.id})})
+      setActionMessage(`Your application for ${job.title} has been submitted.`)
+    } catch(reason) {
+      setError(reason instanceof Error?reason.message:'Unable to submit your application.')
+    } finally {
+      setBusyJobId('')
+    }
+  }
+
+  async function toggleSavedJob(job:JobPosting) {
+    setBusyJobId(job.id)
+    setError('')
+    setActionMessage('')
+    const currentlySaved=savedJobIds.includes(job.id)
+    try {
+      await apiRequest(`/candidate/saved-jobs/${encodeURIComponent(job.id)}`,{method:currentlySaved?'DELETE':'PUT'})
+      setSavedJobIds(current=>currentlySaved?current.filter(id=>id!==job.id):[...current,job.id])
+      setActionMessage(currentlySaved?'Job removed from saved jobs.':'Job saved to your profile.')
+    } catch(reason) {
+      setError(reason instanceof Error?reason.message:'Unable to update saved jobs.')
+    } finally {
+      setBusyJobId('')
+    }
+  }
 
   return <>
     <div className="dashboard-heading"><div><span className="eyebrow">Candidate workspace</span><h1>Find opportunities</h1><p>Explore current openings published by employers.</p></div></div>
     {error&&<p className="employer-form-error" role="alert">{error}</p>}
+    {savedJobsError&&<p className="candidate-error" role="alert">{savedJobsError}</p>}
+    {actionMessage&&<p className="candidate-success" role="status">{actionMessage}</p>}
     {loading&&<section className="panel employer-empty-state"><p>Loading current opportunities…</p></section>}
     {!loading&&!error&&jobs.length===0&&<section className="panel employer-empty-state"><BriefcaseBusiness/><h3>No current openings</h3><p>New opportunities will appear here as employers publish them.</p></section>}
     {!loading&&jobs.length>0&&<div className="live-job-list">{jobs.map(job=><article className="panel live-job-card" key={job.id}>
       <div className="live-job-company"><span className="company-logo">{job.employer.name.slice(0,2).toUpperCase()}</span><div><h2>{job.title}</h2><p>{job.employer.name}{job.employer.industry?` · ${job.employer.industry}`:''}</p></div></div>
       <div className="live-job-facts"><span><small>Location</small><b>{job.location}</b></span><span><small>Work mode</small><b>{job.workMode}</b></span><span><small>Employment</small><b>{job.employmentType}</b></span><span><small>Experience</small><b>{job.experience}</b></span><span><small>Annual package</small><b>{job.salary}</b></span></div>
       <div className="tag-row">{job.requiredSkills.map(skill=><span className="tag" key={skill}>{skill}</span>)}</div>
-      <div className="live-job-footer"><small>Apply by {formatDeadline(job.deadline)}</small><button type="button" className="button secondary small" aria-expanded={expandedJob===job.id} onClick={()=>setExpandedJob(expandedJob===job.id?null:job.id)}>{expandedJob===job.id?'Hide details':'View details'}</button></div>
+      <div className="live-job-footer"><small>Apply by {formatDeadline(job.deadline)}</small><div className="candidate-opportunity-actions"><button type="button" className="button secondary small" aria-expanded={expandedJob===job.id} onClick={()=>setExpandedJob(expandedJob===job.id?null:job.id)}>{expandedJob===job.id?'Hide details':'View details'}</button><button type="button" className="button secondary small" disabled={busyJobId===job.id} onClick={()=>toggleSavedJob(job)}>{savedJobIds.includes(job.id)?'Unsave':'Save job'}</button><button type="button" className="button primary small" disabled={busyJobId===job.id} onClick={()=>applyToJob(job)}>{busyJobId===job.id?'Working…':'Apply now'}</button></div></div>
       {expandedJob===job.id&&<div className="live-job-description"><h3>About this role</h3><p>{job.description}</p>{job.employer.website&&<a href={job.employer.website} target="_blank" rel="noreferrer">Visit company website <ArrowRight size={13}/></a>}</div>}
     </article>)}</div>}
   </>
@@ -229,32 +302,34 @@ function EmployerHeading({title,description,action}:{title:string;description:st
   return <div className="dashboard-heading"><div><span className="eyebrow">Recruiter workspace</span><h1>{title}</h1><p>{description}</p></div>{action}</div>
 }
 
-function EmployerStats({jobs}:{jobs:JobPosting[]}) {
+function EmployerStats({jobs,applications}:{jobs:JobPosting[];applications:EmployerApplication[]}) {
   const stats=[
     [String(jobs.filter(job=>job.status==='active').length),'Active jobs','Published and accepting applications'],
-    ['0','Applications','No applications have been submitted yet'],
-    ['0','Eligible candidates','Appears when candidates apply'],
-    ['0','Shortlisted','Shortlist applicants from the pipeline'],
+    [String(applications.length),'Applications','Candidates who applied to your jobs'],
+    [String(applications.filter(application=>application.status==='Under Review').length),'Under review','Applications awaiting a decision'],
+    [String(applications.filter(application=>application.status==='Shortlisted').length),'Shortlisted','Candidates moved to your shortlist'],
   ]
   return <div className="stat-grid employer-stat-grid">{stats.map(([value,title,description])=><div className="stat-card" key={title}><span className="stat-icon"><BriefcaseBusiness size={19}/></span><div><strong>{value}</strong><b>{title}</b><small>{description}</small></div></div>)}</div>
 }
 
-function EmployerOverview({account,jobs}:{account:EmployerAccount;jobs:JobPosting[]}) {
+function EmployerOverview({account,jobs,applications}:{account:EmployerAccount;jobs:JobPosting[];applications:EmployerApplication[]}) {
   const companyName=account.profile?.organizationName?.trim()||account.fullName||'your company'
+  const countForJob=(jobId:string)=>applications.filter(application=>application.job?.id===jobId).length
+  const shortlistedForJob=(jobId:string)=>applications.filter(application=>application.job?.id===jobId&&application.status==='Shortlisted').length
   return <>
     <EmployerHeading title={`Welcome, ${companyName}!`} description="Manage your openings and review candidate interest from one place." action={<Link href="/employer/jobs/new" className="button primary"><BriefcaseBusiness size={15}/> Post a new job</Link>}/>
-    <EmployerStats jobs={jobs}/>
+    <EmployerStats jobs={jobs} applications={applications}/>
     <div className="content-grid">
       <section className="panel wide">
         <div className="panel-heading"><h2>Recent job postings</h2><Link href="/employer/jobs">Manage jobs <ArrowRight size={14}/></Link></div>
-        <div className="table-wrap"><table><thead><tr><th>Job title</th><th>Applications</th><th>Eligible</th><th>Status</th><th>Deadline</th><th>Actions</th></tr></thead>
-          <tbody>{jobs.slice(0,5).map(job=><tr key={job.id}><td><b>{job.title}</b><small>{job.department} · {job.location}</small></td><td>0</td><td>—</td><td><span className={`badge ${job.status==='active'?'success':'warning'}`}>{job.status}</span></td><td>{formatDeadline(job.deadline)}</td><td><Link href="/employer/candidates" className="button secondary small">Applicants</Link></td></tr>)}</tbody>
+        <div className="table-wrap"><table><thead><tr><th>Job title</th><th>Applications</th><th>Shortlisted</th><th>Status</th><th>Deadline</th><th>Actions</th></tr></thead>
+          <tbody>{jobs.slice(0,5).map(job=><tr key={job.id}><td><b>{job.title}</b><small>{job.department} · {job.location}</small></td><td>{countForJob(job.id)}</td><td>{shortlistedForJob(job.id)}</td><td><span className={`badge ${job.status==='active'?'success':'warning'}`}>{job.status}</span></td><td>{formatDeadline(job.deadline)}</td><td><Link href="/employer/candidates" className="button secondary small">Applicants</Link></td></tr>)}</tbody>
         </table></div>
         {jobs.length===0&&<div className="employer-empty-state"><BriefcaseBusiness/><h3>No job postings yet</h3><p>Create your first opening to make it visible to candidates.</p><Link href="/employer/jobs/new" className="button primary">Post a job</Link></div>}
       </section>
       <section className="panel">
         <div className="panel-heading"><h2>Hiring activity</h2><Link href="/employer/candidates">Applicants <ArrowRight size={14}/></Link></div>
-        <div className="employer-empty-state compact"><Users/><h3>No applicants yet</h3><p>Applications from candidates will appear here.</p></div>
+        {applications.length===0?<div className="employer-empty-state compact"><Users/><h3>No applicants yet</h3><p>Applications from candidates will appear here.</p></div>:<div className="employer-activity-list">{applications.slice(0,5).map(application=><div key={application.id}><span className="candidate-application-dot"/><div><b>{application.candidate?.fullName||'Candidate'}</b><small>{application.job?.title||'Job'} · {application.status}</small></div></div>)}</div>}
       </section>
     </div>
   </>
@@ -337,49 +412,71 @@ function PostJobContent({onCreated}:{onCreated:(job:JobPosting)=>void}) {
   </>
 }
 
-function ManageJobsContent({jobs}:{jobs:JobPosting[]}) {
+function ManageJobsContent({jobs,applications}:{jobs:JobPosting[];applications:EmployerApplication[]}) {
   return <>
     <EmployerHeading title="Manage jobs" description="Review your published roles, application volume and closing dates." action={<Link href="/employer/jobs/new" className="button primary"><BriefcaseBusiness size={15}/> Post a new job</Link>}/>
     <section className="panel employer-table-panel">
       <div className="panel-heading"><h2>All job postings</h2><span className="helper">{jobs.length} {jobs.length===1?'role':'roles'}</span></div>
-      <div className="table-wrap"><table><thead><tr><th>Job title</th><th>Department</th><th>Applications</th><th>Eligible</th><th>Status</th><th>Deadline</th><th>Next step</th></tr></thead>
-        <tbody>{jobs.map(job=><tr key={job.id}><td><b>{job.title}</b><small>{job.location} · {job.workMode}</small></td><td>{job.department}</td><td>0</td><td>—</td><td><span className={`badge ${job.status==='active'?'success':'warning'}`}>{job.status}</span></td><td>{formatDeadline(job.deadline)}</td><td><Link href="/employer/candidates" className="button secondary small">Review applicants</Link></td></tr>)}</tbody>
+      <div className="table-wrap"><table><thead><tr><th>Job title</th><th>Department</th><th>Applications</th><th>Shortlisted</th><th>Status</th><th>Deadline</th><th>Next step</th></tr></thead>
+        <tbody>{jobs.map(job=><tr key={job.id}><td><b>{job.title}</b><small>{job.location} · {job.workMode}</small></td><td>{job.department}</td><td>{applications.filter(application=>application.job?.id===job.id).length}</td><td>{applications.filter(application=>application.job?.id===job.id&&application.status==='Shortlisted').length}</td><td><span className={`badge ${job.status==='active'?'success':'warning'}`}>{job.status}</span></td><td>{formatDeadline(job.deadline)}</td><td><Link href="/employer/candidates" className="button secondary small">Review applicants</Link></td></tr>)}</tbody>
       </table></div>
       {jobs.length===0&&<div className="employer-empty-state"><BriefcaseBusiness/><h3>No job postings yet</h3><p>Post an opening to make it visible to candidates.</p><Link href="/employer/jobs/new" className="button primary">Post a job</Link></div>}
     </section>
   </>
 }
 
-function ApplicantsContent({jobs}:{jobs:JobPosting[]}) {
+function ApplicantsContent({jobs,applications,onApplicationUpdated}:{jobs:JobPosting[];applications:EmployerApplication[];onApplicationUpdated:(application:EmployerApplication)=>void}) {
+  const [updatingId,setUpdatingId]=useState('')
+  const [error,setError]=useState('')
+  async function updateStatus(application:EmployerApplication,status:string) {
+    setUpdatingId(application.id)
+    setError('')
+    try {
+      const result=await apiRequest<{application:EmployerApplication}>(`/jobs/applications/${encodeURIComponent(application.id)}`,{method:'PATCH',body:JSON.stringify({status})})
+      onApplicationUpdated(result.application)
+    } catch(reason) {
+      setError(reason instanceof Error?reason.message:'Unable to update application status.')
+    } finally {
+      setUpdatingId('')
+    }
+  }
   return <>
     <EmployerHeading title="Applicants" description="Applications from candidates will appear here, grouped by the roles they applied for."/>
-    <EmployerStats jobs={jobs}/>
+    <EmployerStats jobs={jobs} applications={applications}/>
     <section className="panel employer-table-panel">
       <div className="panel-heading"><h2>Applicant pipeline</h2><Link href="/employer/jobs">View jobs <ArrowRight size={14}/></Link></div>
-      <div className="table-wrap"><table><thead><tr><th>Candidate</th><th>Applied for</th><th>Skills</th><th>Match</th><th>Applied</th><th>Next step</th></tr></thead>
-        <tbody></tbody>
+      {error&&<p className="employer-form-error" role="alert">{error}</p>}
+      <div className="table-wrap"><table><thead><tr><th>Candidate</th><th>Applied for</th><th>Skills</th><th>Contact</th><th>Applied</th><th>Status</th></tr></thead>
+        <tbody>{applications.map(application=><tr key={application.id}><td><b>{application.candidate?.fullName||'Candidate'}</b><small>{application.candidate?.headline||application.candidate?.highestEducation||application.candidate?.location||'Profile details not provided'}</small></td><td>{application.job?.title||'Job posting unavailable'}</td><td>{application.candidate?.skills.length?application.candidate.skills.map(skill=>skill.name).join(', '):'No skills listed'}</td><td>{application.candidate?.email||'—'}{application.candidate?.phone&&<small>{application.candidate.phone}</small>}</td><td>{formatDeadline(application.createdAt)}</td><td><select aria-label={`Update status for ${application.candidate?.fullName||'candidate'}`} value={application.status} disabled={updatingId===application.id} onChange={event=>updateStatus(application,event.target.value)}>{['Under Review','Shortlisted','Interview','Selected','Rejected'].map(status=><option key={status}>{status}</option>)}</select></td></tr>)}</tbody>
       </table></div>
-      <div className="employer-empty-state"><Users/><h3>No applications yet</h3><p>Applications will appear here when candidates apply to your published jobs.</p></div>
+      {applications.length===0&&<div className="employer-empty-state"><Users/><h3>No applications yet</h3><p>Applications will appear here when candidates apply to your published jobs.</p></div>}
     </section>
   </>
 }
 
-function CandidateRankingContent() {
+function CandidateRankingContent({applications}:{applications:EmployerApplication[]}) {
+  const ranked=applications.map(application=>{
+    const required=application.job?.requiredSkills||[]
+    const skills=new Set((application.candidate?.skills||[]).map(skill=>skill.name.trim().toLowerCase()))
+    const matched=required.filter(skill=>skills.has(skill.trim().toLowerCase()))
+    return {application,matched,total:required.length,score:required.length?Math.round(matched.length/required.length*100):null}
+  }).sort((left,right)=>(right.score??-1)-(left.score??-1))
   return <>
     <EmployerHeading title="Candidate ranking" description="Compare applicant skills and role relevance after candidates apply to your jobs."/>
     <section className="panel employer-ranking-list">
       <div className="panel-heading"><h2>Best-matched candidates</h2><Link href="/employer/candidates">View applicants <ArrowRight size={14}/></Link></div>
-      <div className="employer-empty-state"><BarChart3/><h3>Rankings will appear here</h3><p>Candidate rankings will be available once your jobs receive applications.</p></div>
+      {ranked.length===0?<div className="employer-empty-state"><BarChart3/><h3>Rankings will appear here</h3><p>Candidate rankings will be available once your jobs receive applications.</p></div>:<div className="employer-activity-list">{ranked.map(({application,matched,total,score})=><div key={application.id}><span className="candidate-application-dot"/><div><b>{application.candidate?.fullName||'Candidate'} · {application.job?.title||'Job posting unavailable'}</b><small>{score===null?'No required skills listed':`${matched.length} of ${total} required skills in profile (${score}% overlap)`} · {application.status}</small></div></div>)}</div>}
     </section>
   </>
 }
 
-function ShortlistedContent() {
+function ShortlistedContent({applications}:{applications:EmployerApplication[]}) {
+  const shortlisted=applications.filter(application=>application.status==='Shortlisted')
   return <>
     <EmployerHeading title="Shortlisted candidates" description="Your shortlist will collect applicants you choose to move forward."/>
     <section className="panel employer-ranking-list">
       <div className="panel-heading"><h2>Shortlist</h2><Link href="/employer/candidates">View applicants <ArrowRight size={14}/></Link></div>
-      <div className="employer-empty-state"><CheckCircle2/><h3>No shortlisted candidates</h3><p>Shortlist candidates from your applicant pipeline when applications arrive.</p></div>
+      {shortlisted.length===0?<div className="employer-empty-state"><CheckCircle2/><h3>No shortlisted candidates</h3><p>Shortlist candidates from your applicant pipeline when applications arrive.</p></div>:<div className="employer-activity-list">{shortlisted.map(application=><div key={application.id}><span className="candidate-application-dot"/><div><b>{application.candidate?.fullName||'Candidate'}</b><small>{application.job?.title||'Job posting unavailable'} · {application.candidate?.email||'No email provided'}</small></div></div>)}</div>}
     </section>
   </>
 }
@@ -451,26 +548,27 @@ function EmployerSettingsContent({account}:{account:EmployerAccount}) {
   </>
 }
 
-function EmployerContent({section,account,jobs,onJobCreated,onProfileUpdated}:{section:string;account:EmployerAccount;jobs:JobPosting[];onJobCreated:(job:JobPosting)=>void;onProfileUpdated:(account:EmployerAccount)=>void}) {
+function EmployerContent({section,account,jobs,applications,onJobCreated,onProfileUpdated,onApplicationUpdated}:{section:string;account:EmployerAccount;jobs:JobPosting[];applications:EmployerApplication[];onJobCreated:(job:JobPosting)=>void;onProfileUpdated:(account:EmployerAccount)=>void;onApplicationUpdated:(application:EmployerApplication)=>void}) {
   switch(section) {
     case 'Post a Job': return <PostJobContent onCreated={onJobCreated}/>
-    case 'Manage Jobs': return <ManageJobsContent jobs={jobs}/>
-    case 'Applicants': return <ApplicantsContent jobs={jobs}/>
-    case 'Candidate Ranking': return <CandidateRankingContent/>
-    case 'Shortlisted Candidates': return <ShortlistedContent/>
+    case 'Manage Jobs': return <ManageJobsContent jobs={jobs} applications={applications}/>
+    case 'Applicants': return <ApplicantsContent jobs={jobs} applications={applications} onApplicationUpdated={onApplicationUpdated}/>
+    case 'Candidate Ranking': return <CandidateRankingContent applications={applications}/>
+    case 'Shortlisted Candidates': return <ShortlistedContent applications={applications}/>
     case 'Company Profile': return <CompanyProfileContent account={account} onUpdated={onProfileUpdated}/>
     case 'Settings': return <EmployerSettingsContent account={account}/>
-    default: return <EmployerOverview account={account} jobs={jobs}/>
+    default: return <EmployerOverview account={account} jobs={jobs} applications={applications}/>
   }
 }
 function ProviderContent({section}:{section:string}) { return <><div className="dashboard-heading"><div><span className="eyebrow">Training provider workspace</span><h1>{section==='Overview'?'Welcome, EduSkills Academy!':section}</h1><p>Create and share learning resources to empower job seekers.</p></div><Link href="/provider/materials/new" className="button primary"><Upload size={15}/> Upload new material</Link></div><StatCards role="provider"/><section className="panel"><div className="panel-heading"><h2>{section==='My Materials'?'My materials':'Recent uploaded materials'}</h2><Link href="/provider/materials">View all <ArrowRight size={14}/></Link></div><div className="table-wrap"><table><thead><tr><th>Title</th><th>Type</th><th>Skills</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead><tbody>{[['Python for Beginners (Hindi)','Video','Python','Published','3.2K'],['Data Analysis with Excel','Course','Excel, Data Analysis','Published','2.8K'],['Machine Learning Basics','Video','Machine Learning','Under Review','1.9K'],['Resume Building Guide','Document','Career Development','Published','1.5K'],['SQL Practice Questions','Exercise','SQL, Databases','Published','1.2K']].map(r=><tr key={r[0]}>{r.map((c,i)=><td key={i}>{i===0?<b>{c}</b>:i===3?<span className={c==='Published'?'badge success':'badge warning'}>{c}</span>:c}</td>)}<td><Link href="/provider/materials" className="button secondary small">Edit</Link></td></tr>)}</tbody></table></div></section></> }
 
 export function OpportunityDetails() { const [drawer,setDrawer]=useState(false); const [tab,setTab]=useState('Overview'); const [expanded,setExpanded]=useState<number|null>(0); return <div className="dashboard-page"><AppHeader role="candidate"/><button className="mobile-dashboard-toggle" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu/></button><div className={drawer?'dashboard-layout drawer-open':'dashboard-layout'}><Sidebar role="candidate" section="Find Opportunities"/>{drawer&&<button className="drawer-close" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X/></button>}<main className="dashboard-main"><div className="dashboard-heading"><div><span className="eyebrow">Opportunity details</span><h1>Find a role that fits your path</h1><p>Review eligibility, skill relevance and learning recommendations before you apply.</p></div><Link href="/candidate/opportunities" className="button secondary">Back to opportunities</Link></div><FeaturePage section="Find Opportunities" tab={tab} setTab={setTab} expanded={expanded} setExpanded={setExpanded}/></main></div></div> }
 
-export function Dashboard({role,section='Overview'}:{role:Role;section?:string}) {
+export function Dashboard({role,section='Overview',children}:{role:Role;section?:string;children?:ReactNode}) {
   const [drawer,setDrawer]=useState(false)
   const [employerAccount,setEmployerAccount]=useState<EmployerAccount|null>(null)
   const [employerJobs,setEmployerJobs]=useState<JobPosting[]>([])
+  const [employerApplications,setEmployerApplications]=useState<EmployerApplication[]>([])
   const [employerLoading,setEmployerLoading]=useState(role==='employer')
   const [employerError,setEmployerError]=useState('')
 
@@ -480,11 +578,13 @@ export function Dashboard({role,section='Overview'}:{role:Role;section?:string})
     Promise.all([
       apiRequest<{user:EmployerAccount}>('/auth/me'),
       apiRequest<{jobs:JobPosting[]}>('/jobs/mine'),
-    ]).then(([accountResult,jobsResult])=>{
+      apiRequest<{applications:EmployerApplication[]}>('/jobs/applications'),
+    ]).then(([accountResult,jobsResult,applicationsResult])=>{
       if(!active)return
       if(accountResult.user.role!=='employer')throw new Error('This workspace requires an employer account.')
       setEmployerAccount(accountResult.user)
       setEmployerJobs(jobsResult.jobs)
+      setEmployerApplications(applicationsResult.applications)
     }).catch(error=>{
       if(active)setEmployerError(error instanceof Error?error.message:'Unable to load the employer workspace.')
     }).finally(()=>{
@@ -493,8 +593,9 @@ export function Dashboard({role,section='Overview'}:{role:Role;section?:string})
     return ()=>{active=false}
   },[role])
 
-  const pageContent=role==='candidate'
-    ? section==='Find Opportunities'?<PublicJobListings/>:<><FeatureWorkspace section={section}/>{!['Interview Preparation','AI Career Assistant','Resume Studio','ATS Resume Analyzer','Skill Gap Analysis','Recommended Learning / Learning Hub','Competency Profile'].includes(section)&&<CandidateContent section={section}/>}</>
+  const candidateCoreSections=['Overview','My Profile','My Applications','Saved Jobs','Skill Gap Analysis','Recommended Learning / Learning Hub']
+  const pageContent=children ?? (role==='candidate'
+    ? section==='Find Opportunities'?<PublicJobListings/>:candidateCoreSections.includes(section)?<><CandidateWorkspace section={section}/>{section==='Overview'&&<InterviewRecentResults/>}</>:<FeatureWorkspace section={section}/>
     : role==='employer'
       ? employerLoading?<div className="employer-workspace-state" role="status">Loading your recruiter workspace…</div>
         : employerError?<div className="employer-workspace-state"><p className="employer-form-error" role="alert">{employerError}</p>{employerError.toLowerCase().includes('log in')||employerError.includes('session')?<Link href="/login" className="button primary">Log in</Link>:null}</div>
@@ -502,10 +603,12 @@ export function Dashboard({role,section='Overview'}:{role:Role;section?:string})
             section={section}
             account={employerAccount}
             jobs={employerJobs}
+            applications={employerApplications}
             onJobCreated={job=>setEmployerJobs(current=>[job,...current.filter(item=>item.id!==job.id)])}
             onProfileUpdated={setEmployerAccount}
+            onApplicationUpdated={application=>setEmployerApplications(current=>current.map(item=>item.id===application.id?application:item))}
           />:null
-      : <ProviderContent section={section}/>
+      : <ProviderContent section={section}/>)
 
   return <div className="dashboard-page"><AppHeader role={role} employerName={employerAccount?.profile?.organizationName||employerAccount?.fullName}/><button className="mobile-dashboard-toggle" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu/></button><div className={drawer?'dashboard-layout drawer-open':'dashboard-layout'}><Sidebar role={role} section={section}/>{drawer&&<button className="drawer-close" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X/></button>}<main className="dashboard-main">{pageContent}</main></div></div>
 }
