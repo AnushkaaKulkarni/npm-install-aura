@@ -1,0 +1,3 @@
+import { Dashboard } from '@/components/platform'
+const labels:Record<string,string>={dashboard:'Overview',opportunities:'Find Opportunities',applications:'My Applications','saved-jobs':'Saved Jobs','interview-prep':'Interview Preparation',assistant:'AI Career Assistant','resume-studio':'Resume Studio','ats-analyzer':'ATS Resume Analyzer','competency-profile':'Competency Profile','skill-gaps':'Skill Gap Analysis',learning:'Recommended Learning / Learning Hub',profile:'My Profile',opportunity:'Find Opportunities'}
+export default async function Page({params}:{params:Promise<{section:string}>}){const {section}=await params;return <Dashboard role="candidate" section={labels[section]||'Overview'}/>} 
