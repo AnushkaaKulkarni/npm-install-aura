@@ -1,13 +1,30 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { AudioLines, BarChart3, CheckCircle2, FileText, LoaderCircle, MessageCircle, Mic, MicOff, Play, Plus, Search, Send, Sparkles, Target, Trash2, Volume2, VolumeX, Upload } from 'lucide-react'
+import Link from 'next/link'
+import {
+  AudioLines, BarChart3, CheckCircle2, FileText, LoaderCircle,
+  MessageCircle, Mic, MicOff, Play, Plus, Search, Send, Sparkles,
+  Target, Trash2, Volume2, VolumeX, Upload,
+} from 'lucide-react'
 import { AiTutorSetup } from './ai-tutor/AiTutorSetup'
 import { AiTutorSession } from './ai-tutor/AiTutorSession'
 import type { TutorSessionConfig } from '@/lib/ai-tutor/types'
+import { LearningWorkspace } from './learning-workspace'
+import { apiRequest, type LearningResource } from '@/lib/api'
 
-export function FeatureWorkspace({ section, tutorSession }: { section: string; tutorSession?: TutorSessionConfig }) {
-  if (section === 'AI Tutor') return tutorSession ? <AiTutorSession config={tutorSession}/> : <AiTutorSetup/>
+export function FeatureWorkspace({
+  section,
+  tutorSession,
+}: {
+  section: string
+  tutorSession?: TutorSessionConfig
+}) {
+  if (section === 'AI Tutor') {
+    return tutorSession
+      ? <AiTutorSession config={tutorSession} />
+      : <AiTutorSetup />
+  }
   if (section === 'Interview Preparation') return <InterviewWorkspace />
   if (section === 'AI Career Assistant') return <AssistantWorkspace />
   if (section === 'Resume Studio') return <ResumeWorkspace />
@@ -240,8 +257,79 @@ function ResumeWorkspace() { return <WorkspaceShell eyebrow="Shape your story" t
 
 function AtsWorkspace() { return <WorkspaceShell eyebrow="Understand your match" title="ATS Resume Analyzer" description="See how your resume covers the target role and which changes can improve compatibility."><div className="workspace-grid ats-grid"><section className="panel score-panel"><span className="eyebrow">Estimated compatibility</span><div className="big-score">78<span>/100</span></div><p>Good foundation. Add evidence for two role requirements to strengthen your match.</p><div className="score-bar"><i style={{width:'78%'}} /></div></section><section className="panel checklist-panel"><div className="panel-heading"><h3>Prioritized checklist</h3><CheckCircle2 size={18}/></div>{['Add REST API project evidence','Mention SQL joins in skills','Use measurable impact in experience','Keep section headings consistent'].map((x,i)=><div className="checklist-row" key={x}><span>{i+1}</span><div><b>{x}</b><small>{i<2?'High priority':'Recommended'}</small></div></div>)}</section></div></WorkspaceShell> }
 
-function SkillGapWorkspace() { return <WorkspaceShell eyebrow="Make the next step clear" title="Skill Gap Analysis" description="Compare your demonstrated skills with what the target opportunity asks for."><div className="workspace-grid skill-gap-grid"><section className="panel"><div className="panel-heading"><h3>Software Developer (Fresher)</h3><Target size={18}/></div>{[['Python','Demonstrated','strong'],['SQL','Partial match','partial'],['REST APIs','Missing','missing'],['React','Demonstrated','strong']].map(([skill,status,tone])=><div className="skill-row" key={skill}><b>{skill}</b><span className={`skill-state ${tone}`}>{status}</span><div className="mini-bar"><i style={{width:tone==='strong'?'90%':tone==='partial'?'55%':'15%'}} /></div></div>)}</section><section className="panel"><div className="panel-heading"><h3>Recommended learning path</h3><Upload size={18}/></div>{['REST API fundamentals','SQL joins and query practice','Build a React project'].map((x,i)=><div className="learning-row" key={x}><span>0{i+1}</span><div><b>{x}</b><small>{i===0?'4 hours · Beginner':'6 hours · Practice'}</small></div><button className="button secondary small">Start</button></div>)}</section></div></WorkspaceShell> }
+function SkillGapWorkspace() {
+  const [recommendations, setRecommendations] = useState<LearningResource[]>([])
 
-function LearningWorkspace() { return <WorkspaceShell eyebrow="Learn what moves you forward" title="Learning Hub" description="Find resources connected to your current skill gaps and preferred learning style."><div className="learning-toolbar"><div className="input-with-icon"><Search size={16}/><input placeholder="Search skills, topics or resources" aria-label="Search learning resources"/></div><select aria-label="Filter by language"><option>All languages</option><option>English</option><option>हिन्दी — Hindi</option></select><select aria-label="Filter by level"><option>All levels</option><option>Beginner</option><option>Intermediate</option></select></div><div className="resource-list">{['Complete Python for Data Analysis','SQL for Beginners (Hindi)','Data Visualization with Power BI','REST API fundamentals'].map((x,i)=><article className="resource-row" key={x}><span className="resource-number">0{i+1}</span><div><b>{x}</b><small>{i===1?'Hindi · 6 hours':'English · '+(4+i)+' hours'} · Skill gap recommendation</small></div><span className="badge match">{i<2?'Recommended':'Saved'}</span><button className="button secondary small">Open resource</button></article>)}</div></WorkspaceShell> }
+  useEffect(() => {
+    let active = true
+    apiRequest<{ recommendations: LearningResource[] }>('/resources/recommendations?targetRole=Software Developer (Fresher)')
+      .then((data) => {
+        if (active) setRecommendations(data.recommendations || [])
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return (
+    <WorkspaceShell
+      eyebrow="Make the next step clear"
+      title="Skill Gap Analysis"
+      description="Compare your demonstrated skills with what the target opportunity asks for."
+    >
+      <div className="workspace-grid skill-gap-grid">
+        <section className="panel">
+          <div className="panel-heading">
+            <h3>Software Developer (Fresher)</h3>
+            <Target size={18} />
+          </div>
+          {[
+            ['Python', 'Demonstrated', 'strong'],
+            ['SQL', 'Partial match', 'partial'],
+            ['REST APIs', 'Missing', 'missing'],
+            ['React', 'Demonstrated', 'strong'],
+          ].map(([skill, status, tone]) => (
+            <div className="skill-row" key={skill}>
+              <b>{skill}</b>
+              <span className={`skill-state ${tone}`}>{status}</span>
+              <div className="mini-bar">
+                <i style={{ width: tone === 'strong' ? '90%' : tone === 'partial' ? '55%' : '15%' }} />
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading">
+            <h3>Recommended learning path</h3>
+            <Link href="/candidate/learning" style={{ fontSize: '11px', color: 'var(--blue)', textDecoration: 'none' }}>
+              Learning Hub →
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {recommendations.slice(0, 4).map((rec, i) => (
+              <div className="learning-row" key={rec.id || i}>
+                <span>0{i + 1}</span>
+                <div style={{ flex: 1 }}>
+                  <b>{rec.title}</b>
+                  <small>
+                    {rec.difficulty} · {rec.durationMinutes} mins · {rec.recommendationReason || 'Skill gap recommendation'}
+                  </small>
+                </div>
+                <Link href="/candidate/learning" className="button secondary small">
+                  Start
+                </Link>
+              </div>
+            ))}
+            {recommendations.length === 0 && (
+              <p style={{ color: 'var(--muted)', fontSize: '11px' }}>Loading learning recommendations...</p>
+            )}
+          </div>
+        </section>
+      </div>
+    </WorkspaceShell>
+  )
+}
 
 function CompetencyWorkspace() { return <WorkspaceShell eyebrow="Your evidence-based profile" title="Competency Profile" description="Track proficiency, evidence and progress across the capabilities employers value."><div className="competency-list">{[['Problem solving','Advanced','Project assessment'],['Python','Intermediate','Course + project'],['Communication','Intermediate','Interview practice'],['SQL','Beginner','Learning in progress']].map(([name,level,evidence])=><div className="competency-row" key={name}><div><b>{name}</b><small>{evidence}</small></div><span className="badge success">{level}</span><div className="competency-bar"><i style={{width:level==='Advanced'?'88%':level==='Intermediate'?'65%':'35%'}} /></div><button className="button secondary small">View evidence</button></div>)}</div></WorkspaceShell> }

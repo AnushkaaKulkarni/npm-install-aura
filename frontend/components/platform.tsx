@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { FeatureWorkspace } from './feature-workspaces'
 import type { TutorSessionConfig } from '@/lib/ai-tutor/types'
+import { ProviderWorkspace } from './provider-workspace'
+import { type LearningResource } from '@/lib/api'
 import {
   ArrowRight, BarChart3, Bell, BookOpen, BriefcaseBusiness, Building2, Check, CheckCircle2,
   ChevronDown, ClipboardCheck, Clock3, FileText, GraduationCap, Heart, Languages, LayoutDashboard,
@@ -184,7 +186,7 @@ function formatDeadline(value:string) {
 
 const candidateLinks=[['Overview','/candidate/dashboard',LayoutDashboard],['Find Opportunities','/candidate/opportunities',Search],['My Applications','/candidate/applications',ClipboardCheck],['Saved Jobs','/candidate/saved-jobs',Heart],['Interview Preparation','/candidate/interview-prep',MessageCircle],['AI Tutor','/candidate/ai-tutor',GraduationCap],['AI Career Assistant','/candidate/assistant',Sparkles],['Resume Studio','/candidate/resume-studio',FileText],['ATS Resume Analyzer','/candidate/ats-analyzer',ShieldCheck],['Competency Profile','/candidate/competency-profile',Target],['Skill Gap Analysis','/candidate/skill-gaps',BarChart3],['Recommended Learning / Learning Hub','/candidate/learning',BookOpen],['My Profile','/candidate/profile',UserRound]] as const
 const employerLinks=[['Overview','/employer/dashboard',LayoutDashboard],['Post a Job','/employer/jobs/new',BriefcaseBusiness],['Manage Jobs','/employer/jobs',ClipboardCheck],['Applicants','/employer/candidates',Users],['Candidate Ranking','/employer/ranking',BarChart3],['Shortlisted Candidates','/employer/shortlisted',CheckCircle2],['Company Profile','/employer/profile',Building2],['Settings','/employer/settings',Settings]] as const
-const providerLinks=[['Overview','/provider/dashboard',LayoutDashboard],['Upload Material','/provider/materials/new',Upload],['My Materials','/provider/materials',BookOpen],['Skills and Categories','/provider/skills',Target],['Analytics','/provider/analytics',BarChart3],['Profile and Settings','/provider/profile',Settings]] as const
+const providerLinks=[['Overview','/provider/dashboard',LayoutDashboard],['Upload Material','/provider/materials/new',Upload],['My Materials','/provider/materials',BookOpen],['Analytics','/provider/analytics',BarChart3],['Profile and Settings','/provider/profile',Settings]] as const
 
 function Sidebar({role,section}:{role:Role;section:string}) { const links=role==='candidate'?candidateLinks:role==='employer'?employerLinks:providerLinks; return <aside className="app-sidebar"><div className="sidebar-brand"><Logo/></div><div className="sidebar-scroll"><span className="sidebar-kicker">{role==='candidate'?'Candidate workspace':role==='employer'?'Recruiter workspace':'Training provider'}</span>{links.map(([label,url,I])=><Link className={section===label?'active':''} href={url} key={label}><I size={17}/><span>{label}</span></Link>)}</div><Link href="/" className="logout">Log out</Link></aside> }
 
@@ -464,8 +466,6 @@ function EmployerContent({section,account,jobs,onJobCreated,onProfileUpdated}:{s
     default: return <EmployerOverview account={account} jobs={jobs}/>
   }
 }
-function ProviderContent({section}:{section:string}) { return <><div className="dashboard-heading"><div><span className="eyebrow">Training provider workspace</span><h1>{section==='Overview'?'Welcome, EduSkills Academy!':section}</h1><p>Create and share learning resources to empower job seekers.</p></div><Link href="/provider/materials/new" className="button primary"><Upload size={15}/> Upload new material</Link></div><StatCards role="provider"/><section className="panel"><div className="panel-heading"><h2>{section==='My Materials'?'My materials':'Recent uploaded materials'}</h2><Link href="/provider/materials">View all <ArrowRight size={14}/></Link></div><div className="table-wrap"><table><thead><tr><th>Title</th><th>Type</th><th>Skills</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead><tbody>{[['Python for Beginners (Hindi)','Video','Python','Published','3.2K'],['Data Analysis with Excel','Course','Excel, Data Analysis','Published','2.8K'],['Machine Learning Basics','Video','Machine Learning','Under Review','1.9K'],['Resume Building Guide','Document','Career Development','Published','1.5K'],['SQL Practice Questions','Exercise','SQL, Databases','Published','1.2K']].map(r=><tr key={r[0]}>{r.map((c,i)=><td key={i}>{i===0?<b>{c}</b>:i===3?<span className={c==='Published'?'badge success':'badge warning'}>{c}</span>:c}</td>)}<td><Link href="/provider/materials" className="button secondary small">Edit</Link></td></tr>)}</tbody></table></div></section></> }
-
 export function OpportunityDetails() { const [drawer,setDrawer]=useState(false); const [tab,setTab]=useState('Overview'); const [expanded,setExpanded]=useState<number|null>(0); return <div className="dashboard-page"><AppHeader role="candidate"/><button className="mobile-dashboard-toggle" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu/></button><div className={drawer?'dashboard-layout drawer-open':'dashboard-layout'}><Sidebar role="candidate" section="Find Opportunities"/>{drawer&&<button className="drawer-close" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X/></button>}<main className="dashboard-main"><div className="dashboard-heading"><div><span className="eyebrow">Opportunity details</span><h1>Find a role that fits your path</h1><p>Review eligibility, skill relevance and learning recommendations before you apply.</p></div><Link href="/candidate/opportunities" className="button secondary">Back to opportunities</Link></div><FeaturePage section="Find Opportunities" tab={tab} setTab={setTab} expanded={expanded} setExpanded={setExpanded}/></main></div></div> }
 
 export function Dashboard({role,section='Overview',tutorSession}:{role:Role;section?:string;tutorSession?:TutorSessionConfig}) {
@@ -475,24 +475,76 @@ export function Dashboard({role,section='Overview',tutorSession}:{role:Role;sect
   const [employerLoading,setEmployerLoading]=useState(role==='employer')
   const [employerError,setEmployerError]=useState('')
 
+  const [providerAccount,setProviderAccount]=useState<{fullName:string;role:string;profile?:any}|null>(null)
+  const [providerResources,setProviderResources]=useState<LearningResource[]>([])
+  const [providerLoading,setProviderLoading]=useState(role==='provider')
+
+  function reloadProviderResources() {
+    apiRequest<{resources:LearningResource[]}>('/resources/mine')
+      .then(res=>setProviderResources(res.resources||[]))
+      .catch(()=>{})
+  }
+
   useEffect(()=>{
-    if(role!=='employer') return
-    let active=true
-    Promise.all([
-      apiRequest<{user:EmployerAccount}>('/auth/me'),
-      apiRequest<{jobs:JobPosting[]}>('/jobs/mine'),
-    ]).then(([accountResult,jobsResult])=>{
-      if(!active)return
-      if(accountResult.user.role!=='employer')throw new Error('This workspace requires an employer account.')
-      setEmployerAccount(accountResult.user)
-      setEmployerJobs(jobsResult.jobs)
-    }).catch(error=>{
-      if(active)setEmployerError(error instanceof Error?error.message:'Unable to load the employer workspace.')
-    }).finally(()=>{
-      if(active)setEmployerLoading(false)
-    })
-    return ()=>{active=false}
+    if(role==='employer') {
+      let active=true
+      Promise.all([
+        apiRequest<{user:EmployerAccount}>('/auth/me'),
+        apiRequest<{jobs:JobPosting[]}>('/jobs/mine'),
+      ]).then(([accountResult,jobsResult])=>{
+        if(!active)return
+        if(accountResult.user.role!=='employer')throw new Error('This workspace requires an employer account.')
+        setEmployerAccount(accountResult.user)
+        setEmployerJobs(jobsResult.jobs)
+      }).catch(error=>{
+        if(active)setEmployerError(error instanceof Error?error.message:'Unable to load the employer workspace.')
+      }).finally(()=>{
+        if(active)setEmployerLoading(false)
+      })
+      return ()=>{active=false}
+    }
+
+    if(role==='provider') {
+      let active=true
+      Promise.allSettled([
+        apiRequest<{user:any}>('/auth/me'),
+        apiRequest<{resources:LearningResource[]}>('/resources/mine'),
+      ]).then(([accResult,resResult])=>{
+        if(!active)return
+        if(accResult.status==='fulfilled'&&accResult.value.user) {
+          setProviderAccount(accResult.value.user)
+        } else {
+          setProviderAccount({
+            fullName:'EduSkills Academy',
+            role:'provider',
+            profile:{
+              organizationName:'EduSkills Academy',
+              designation:'Curriculum Director',
+              website:'https://eduskills.org',
+              industry:'Education & Training',
+              description:'National skilling partner empowering Indian job seekers with industry-aligned technical curriculum.',
+            },
+          })
+        }
+
+        if(resResult.status==='fulfilled') {
+          setProviderResources(resResult.value.resources||[])
+        } else {
+          apiRequest<{resources:LearningResource[]}>('/resources')
+            .then(pub=>{if(active)setProviderResources(pub.resources||[])})
+            .catch(()=>{})
+        }
+        setProviderLoading(false)
+      })
+      return ()=>{active=false}
+    }
   },[role])
+
+  const currentDisplayName=role==='employer'
+    ? employerAccount?.profile?.organizationName||employerAccount?.fullName
+    : role==='provider'
+      ? providerAccount?.profile?.organizationName||providerAccount?.fullName||'EduSkills Academy'
+      : undefined
 
   const pageContent=role==='candidate'
     ? section==='Find Opportunities'?<PublicJobListings/>:<><FeatureWorkspace section={section} tutorSession={tutorSession}/>{!['Interview Preparation','AI Career Assistant','AI Tutor','Resume Studio','ATS Resume Analyzer','Skill Gap Analysis','Recommended Learning / Learning Hub','Competency Profile'].includes(section)&&<CandidateContent section={section}/>}</>
@@ -506,7 +558,15 @@ export function Dashboard({role,section='Overview',tutorSession}:{role:Role;sect
             onJobCreated={job=>setEmployerJobs(current=>[job,...current.filter(item=>item.id!==job.id)])}
             onProfileUpdated={setEmployerAccount}
           />:null
-      : <ProviderContent section={section}/>
+      : <ProviderWorkspace
+          section={section}
+          account={providerAccount}
+          resources={providerResources}
+          onResourceCreated={newRes=>setProviderResources(curr=>[newRes,...curr])}
+          onResourceUpdated={updated=>setProviderResources(curr=>curr.map(item=>item.id===updated.id?updated:item))}
+          onResourceDeleted={deletedId=>setProviderResources(curr=>curr.filter(item=>item.id!==deletedId))}
+          onReloadNeeded={reloadProviderResources}
+        />
 
-  return <div className="dashboard-page"><AppHeader role={role} employerName={employerAccount?.profile?.organizationName||employerAccount?.fullName}/><button className="mobile-dashboard-toggle" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu/></button><div className={drawer?'dashboard-layout drawer-open':'dashboard-layout'}><Sidebar role={role} section={section}/>{drawer&&<button className="drawer-close" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X/></button>}<main className="dashboard-main">{pageContent}</main></div></div>
+  return <div className="dashboard-page"><AppHeader role={role} employerName={currentDisplayName}/><button className="mobile-dashboard-toggle" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu/></button><div className={drawer?'dashboard-layout drawer-open':'dashboard-layout'}><Sidebar role={role} section={section}/>{drawer&&<button className="drawer-close" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X/></button>}<main className="dashboard-main">{pageContent}</main></div></div>
 }
