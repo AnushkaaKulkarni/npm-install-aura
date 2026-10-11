@@ -20,6 +20,9 @@ const userSchema = new mongoose.Schema({
     organizationName: { type: String, trim: true, maxlength: 160 },
     designation: { type: String, trim: true, maxlength: 100 },
     website: { type: String, trim: true, maxlength: 2048 },
+    industry: { type: String, trim: true, maxlength: 120 },
+    companySize: { type: String, trim: true, maxlength: 80 },
+    description: { type: String, trim: true, maxlength: 2000 },
   },
 }, { timestamps: true })
 

@@ -1,0 +1,68 @@
+.employer-form-panel,.employer-table-panel,.employer-ranking-list,.employer-settings-panel{padding:18px}
+.employer-form-panel>.panel-heading,.employer-table-panel>.panel-heading,.employer-ranking-list>.panel-heading,.employer-settings-panel>.panel-heading{margin:0 0 16px}
+.employer-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin:0}
+.employer-form label{display:grid;gap:7px;font-size:12px;font-weight:700;color:var(--text)}
+.employer-form input,.employer-form select,.employer-form textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:5px;padding:11px;background:#fff;color:var(--text);font:inherit;font-weight:400}
+.employer-form textarea{resize:vertical}
+.employer-form-wide{grid-column:1/-1}
+.employer-range-group{display:grid;gap:9px;min-width:0;margin:0;padding:14px;border:1px solid var(--line);border-radius:7px}
+.employer-range-group legend{padding:0 5px;color:var(--navy);font-size:12px;font-weight:700}
+.employer-range-group legend span{color:var(--muted);font-size:10px;font-weight:400}
+.employer-range-group>small{color:var(--muted);font-size:10px}
+.employer-range-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.employer-range-inputs label{display:grid;gap:7px;font-size:11px;font-weight:600}
+.employer-form-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap}
+.employer-form-notice{margin:0 auto 0 0;color:var(--green);font-size:12px}
+.employer-table-panel .table-wrap{overflow-x:auto}
+.employer-table-panel table{width:100%;border-collapse:collapse;text-align:left}
+.employer-table-panel th,.employer-table-panel td{padding:12px 10px;border-bottom:1px solid #edf0f4;vertical-align:middle;font-size:11px}
+.employer-table-panel th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.employer-table-panel td b,.employer-table-panel td small{display:block}
+.employer-table-panel td small{margin-top:4px;color:var(--muted);font-size:10px}
+.employer-ranking-row{display:flex;align-items:center;gap:16px;padding:15px 4px;border-bottom:1px solid #edf0f4}
+.employer-ranking-row:last-child{border-bottom:0}
+.employer-ranking-person{display:flex;flex:1;min-width:140px;flex-direction:column;gap:4px}
+.employer-ranking-person small,.employer-match small,.employer-profile-summary small{color:var(--muted);font-size:10px}
+.employer-match{display:grid;grid-template-columns:auto minmax(80px,130px);align-items:center;gap:5px 10px}
+.employer-match strong{color:var(--green);font-size:13px}
+.employer-match small{grid-column:1/-1}
+.employer-match-bar{height:6px;overflow:hidden;border-radius:10px;background:#e8edf3}
+.employer-match-bar i{display:block;height:100%;border-radius:inherit;background:var(--green)}
+.employer-settings-panel{margin-bottom:16px}
+.employer-setting,.employer-profile-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 4px;border-bottom:1px solid #edf0f4}
+.employer-setting:last-child{border-bottom:0}
+.employer-setting span,.employer-profile-summary div{display:grid;gap:5px}
+.employer-setting small{color:var(--muted);font-size:11px}
+.employer-setting input{width:17px;height:17px;accent-color:var(--blue)}
+.employer-profile-summary{border:0}
+.employer-stat-grid .stat-card{min-height:102px;align-items:flex-start}
+.employer-stat-grid .stat-card small{color:var(--muted);line-height:1.4}
+.employer-empty-state,.employer-workspace-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:34px 20px;text-align:center;color:var(--muted)}
+.employer-empty-state>svg{width:28px;height:28px;color:var(--blue)}
+.employer-empty-state h3{margin:0;color:var(--navy);font-size:15px}
+.employer-empty-state p,.employer-workspace-state p{margin:0;font-size:12px;line-height:1.5}
+.employer-empty-state.compact{padding:27px 14px}
+.employer-form-error{padding:11px 13px;border:1px solid #f2c9c5;border-radius:6px;background:#fff4f2;color:#a33228;font-size:12px}
+.employer-success{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:13px 14px;border:1px solid #c8e5d5;border-radius:7px;background:#eff8f3;color:var(--green)}
+.employer-success>svg{flex:0 0 auto}
+.employer-success>div{display:grid;flex:1;gap:4px}
+.employer-success small{color:var(--muted);font-size:11px}
+.employer-workspace-state{min-height:280px}
+.live-job-list{display:grid;gap:14px}
+.live-job-card{padding:19px}
+.live-job-company{display:flex;align-items:center;gap:14px}
+.live-job-company h2{margin:0 0 5px;color:var(--navy);font-size:18px}
+.live-job-company p{margin:0;color:var(--muted);font-size:12px}
+.live-job-facts{display:flex;flex-wrap:wrap;gap:14px 26px;margin-top:16px;color:var(--muted);font-size:11px}
+.live-job-facts>span{display:grid;gap:4px}
+.live-job-facts small{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.04em}
+.live-job-facts b{color:var(--text);font-size:11px;font-weight:600}
+.live-job-card .tag-row{flex-wrap:wrap;margin:14px 0}
+.live-job-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid #edf0f4}
+.live-job-footer small{color:var(--muted)}
+.live-job-description{margin-top:14px;padding-top:13px;border-top:1px solid #edf0f4}
+.live-job-description h3{margin:0 0 7px;color:var(--navy);font-size:13px}
+.live-job-description p{margin:0;color:var(--muted);font-size:12px;line-height:1.6;white-space:pre-wrap}
+.live-job-description a{display:inline-flex;align-items:center;gap:5px;margin-top:10px;color:var(--blue);font-size:11px;font-weight:700}
+@media(min-width:801px) and (max-width:900px){.dashboard-layout{grid-template-columns:220px minmax(0,1fr)}.dashboard-layout>.app-sidebar{position:static!important;top:auto!important;bottom:auto!important;left:auto!important;height:auto!important;z-index:auto}}
+@media(max-width:700px){.employer-form{grid-template-columns:1fr}.employer-form-wide{grid-column:auto}.employer-range-inputs{grid-template-columns:1fr}.employer-ranking-row{align-items:flex-start;flex-wrap:wrap}.employer-ranking-person{flex-basis:calc(100% - 55px)}.employer-match{margin-left:40px}.live-job-card{padding:15px}.live-job-footer{align-items:flex-start;flex-direction:column}.employer-success{align-items:flex-start;flex-wrap:wrap}}

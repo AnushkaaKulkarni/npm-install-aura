@@ -22,14 +22,18 @@ backend/
 ├── controllers/
 │   ├── authController.js       # Signup, login, logout, and current-user handlers
 │   └── healthController.js     # API health handler
+│   ├── jobController.js        # Public job listings and employer job management
+│   └── profileController.js    # Employer company profile updates
 ├── middlewares/
 │   ├── authenticate.js         # JWT session authentication
 │   ├── authRateLimiter.js      # Signup/login rate limit
 │   ├── errorHandler.js         # Central API error responses
 │   └── notFoundHandler.js      # Unknown endpoint response
 ├── models/
-│   └── User.js                 # Mongoose user model
+│   ├── Job.js                  # MongoDB job posting model
+│   └── User.js                 # Mongoose user model and company profile
 ├── routes/
+│   ├── jobRoutes.js            # Public job listings and authenticated employer routes
 │   ├── authRoutes.js           # Authentication route definitions
 │   └── healthRoutes.js         # Health route definitions
 └── utils/
@@ -44,6 +48,11 @@ backend/
 - `POST /api/auth/login` validates an email and password and sets the session cookie.
 - `POST /api/auth/logout` clears the session cookie.
 - `GET /api/auth/me` returns the current account when the cookie is valid.
+- `PATCH /api/auth/company-profile` updates the authenticated employer's company profile.
+- `GET /api/jobs` lists active, unexpired job postings for candidates.
+- `GET /api/jobs/mine` lists the authenticated employer's postings.
+- `POST /api/jobs` validates and stores an authenticated employer's job posting.
+- Job postings store experience as minimum/maximum whole years and annual package as optional minimum/maximum LPA values. Public listings render these as explicit ranges (for example, `0–3 years` and `₹6–9 LPA`); older text-based ranges remain readable.
 - `GET /health` reports API and MongoDB connection status.
 
 Signup requires contact details and a role-specific profile. New accounts are stored with `verificationStatus: "pending"`; the API does not claim to verify identity or send email until a verification provider is configured.
