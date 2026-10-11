@@ -143,6 +143,10 @@ const userSchema = new mongoose.Schema({
     industry: { type: String, trim: true, maxlength: 120 },
     companySize: { type: String, trim: true, maxlength: 80 },
     description: { type: String, trim: true, maxlength: 2000 },
+    skills: { type: [String], default: [] },
+    experience: { type: String, trim: true, maxlength: 2000 },
+    targetRole: { type: String, trim: true, maxlength: 160 },
+    resumeSummary: { type: String, trim: true, maxlength: 4000 },
     candidate: { type: candidateProfileSchema, default: () => ({}) },
   },
 }, { timestamps: true })

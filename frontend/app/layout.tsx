@@ -1,6 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import './assistant.css'
+import './ai-tutor.css'
 
 export const metadata: Metadata = {
   title: 'Opportunity Details | RozgarLink',

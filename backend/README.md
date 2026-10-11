@@ -5,7 +5,7 @@ The API stores accounts in MongoDB and exposes cookie-based authentication for t
 ## Start locally
 
 1. Keep your real MongoDB URI and JWT secret in `backend/.env`; do not commit that file.
-2. Set `GEMINI_INTERVIEW_API_KEY` in `backend/.env` to enable AI-powered interview practice, audio transcription and reports. The optional `GEMINI_INTERVIEW_MODEL` setting defaults to `gemini-2.5-flash`. Keep the key on the backend; do not add it to a `NEXT_PUBLIC_*` variable or the frontend `.env.local`.
+2. Set `GROQ_API_KEY` in `backend/.env`. The key is used only by the backend and is never sent to the browser. `GROQ_MODEL` is optional and defaults to `llama-3.3-70b-versatile`.
 3. Set `MONGO_DB_NAME` to the database to use (defaults to `rozgarlink`).
 4. Install dependencies with `npm install`.
 5. Run `npm run dev` from this directory.
@@ -82,5 +82,13 @@ backend/
 - Audio recording is explicit and is not saved to MongoDB. The original speech transcript and candidate-edited answer are saved with per-answer AI scores. Confidence and delivery are not scored because the implementation does not analyze voice or video.
 - Job postings store experience as minimum/maximum whole years and annual package as optional minimum/maximum LPA values. Public listings render these as explicit ranges (for example, `0–3 years` and `₹6–9 LPA`); older text-based ranges remain readable.
 - `GET /health` reports API and MongoDB connection status.
+
+## AI Career Assistant
+
+The authenticated candidate API at `/api/assistant` stores conversations in MongoDB and scopes every read, write, and delete to the signed-in user. Groq requests run on the backend using `GROQ_API_KEY`. The assistant is instructed to stay within career and employment topics, use only profile facts actually stored for the account, and ask for missing target-role or skill information rather than inventing a gap analysis. It does not query job listings because this project currently has no persisted job-listing model.
+
+The candidate AI Tutor endpoint `POST /api/ai-tutor/sessions` uses the same Groq client and returns a validated structured lesson in English, Hindi, or Marathi for 5, 10, 15, or 20 minutes.
+
+Voice input uses the browser Web Speech recognition API (browser and microphone permission dependent). Spoken replies use the browser's speech synthesis voices; the selected language is also sent to Groq for text replies.
 
 Signup requires contact details and a role-specific profile. New accounts are stored with `verificationStatus: "pending"`; the API does not claim to verify identity or send email until a verification provider is configured.
