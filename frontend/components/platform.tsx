@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { FeatureWorkspace } from './feature-workspaces'
+import type { TutorSessionConfig } from '@/lib/ai-tutor/types'
 import {
   ArrowRight, BarChart3, Bell, BookOpen, BriefcaseBusiness, Building2, Check, CheckCircle2,
   ChevronDown, ClipboardCheck, Clock3, FileText, GraduationCap, Heart, Languages, LayoutDashboard,
@@ -181,7 +182,7 @@ function formatDeadline(value:string) {
   return new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value))
 }
 
-const candidateLinks=[['Overview','/candidate/dashboard',LayoutDashboard],['Find Opportunities','/candidate/opportunities',Search],['My Applications','/candidate/applications',ClipboardCheck],['Saved Jobs','/candidate/saved-jobs',Heart],['Interview Preparation','/candidate/interview-prep',MessageCircle],['AI Career Assistant','/candidate/assistant',Sparkles],['Resume Studio','/candidate/resume-studio',FileText],['ATS Resume Analyzer','/candidate/ats-analyzer',ShieldCheck],['Competency Profile','/candidate/competency-profile',Target],['Skill Gap Analysis','/candidate/skill-gaps',BarChart3],['Recommended Learning / Learning Hub','/candidate/learning',BookOpen],['My Profile','/candidate/profile',UserRound]] as const
+const candidateLinks=[['Overview','/candidate/dashboard',LayoutDashboard],['Find Opportunities','/candidate/opportunities',Search],['My Applications','/candidate/applications',ClipboardCheck],['Saved Jobs','/candidate/saved-jobs',Heart],['Interview Preparation','/candidate/interview-prep',MessageCircle],['AI Tutor','/candidate/ai-tutor',GraduationCap],['AI Career Assistant','/candidate/assistant',Sparkles],['Resume Studio','/candidate/resume-studio',FileText],['ATS Resume Analyzer','/candidate/ats-analyzer',ShieldCheck],['Competency Profile','/candidate/competency-profile',Target],['Skill Gap Analysis','/candidate/skill-gaps',BarChart3],['Recommended Learning / Learning Hub','/candidate/learning',BookOpen],['My Profile','/candidate/profile',UserRound]] as const
 const employerLinks=[['Overview','/employer/dashboard',LayoutDashboard],['Post a Job','/employer/jobs/new',BriefcaseBusiness],['Manage Jobs','/employer/jobs',ClipboardCheck],['Applicants','/employer/candidates',Users],['Candidate Ranking','/employer/ranking',BarChart3],['Shortlisted Candidates','/employer/shortlisted',CheckCircle2],['Company Profile','/employer/profile',Building2],['Settings','/employer/settings',Settings]] as const
 const providerLinks=[['Overview','/provider/dashboard',LayoutDashboard],['Upload Material','/provider/materials/new',Upload],['My Materials','/provider/materials',BookOpen],['Skills and Categories','/provider/skills',Target],['Analytics','/provider/analytics',BarChart3],['Profile and Settings','/provider/profile',Settings]] as const
 
@@ -467,7 +468,7 @@ function ProviderContent({section}:{section:string}) { return <><div className="
 
 export function OpportunityDetails() { const [drawer,setDrawer]=useState(false); const [tab,setTab]=useState('Overview'); const [expanded,setExpanded]=useState<number|null>(0); return <div className="dashboard-page"><AppHeader role="candidate"/><button className="mobile-dashboard-toggle" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu/></button><div className={drawer?'dashboard-layout drawer-open':'dashboard-layout'}><Sidebar role="candidate" section="Find Opportunities"/>{drawer&&<button className="drawer-close" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X/></button>}<main className="dashboard-main"><div className="dashboard-heading"><div><span className="eyebrow">Opportunity details</span><h1>Find a role that fits your path</h1><p>Review eligibility, skill relevance and learning recommendations before you apply.</p></div><Link href="/candidate/opportunities" className="button secondary">Back to opportunities</Link></div><FeaturePage section="Find Opportunities" tab={tab} setTab={setTab} expanded={expanded} setExpanded={setExpanded}/></main></div></div> }
 
-export function Dashboard({role,section='Overview'}:{role:Role;section?:string}) {
+export function Dashboard({role,section='Overview',tutorSession}:{role:Role;section?:string;tutorSession?:TutorSessionConfig}) {
   const [drawer,setDrawer]=useState(false)
   const [employerAccount,setEmployerAccount]=useState<EmployerAccount|null>(null)
   const [employerJobs,setEmployerJobs]=useState<JobPosting[]>([])
@@ -494,7 +495,7 @@ export function Dashboard({role,section='Overview'}:{role:Role;section?:string})
   },[role])
 
   const pageContent=role==='candidate'
-    ? section==='Find Opportunities'?<PublicJobListings/>:<><FeatureWorkspace section={section}/>{!['Interview Preparation','AI Career Assistant','Resume Studio','ATS Resume Analyzer','Skill Gap Analysis','Recommended Learning / Learning Hub','Competency Profile'].includes(section)&&<CandidateContent section={section}/>}</>
+    ? section==='Find Opportunities'?<PublicJobListings/>:<><FeatureWorkspace section={section} tutorSession={tutorSession}/>{!['Interview Preparation','AI Career Assistant','AI Tutor','Resume Studio','ATS Resume Analyzer','Skill Gap Analysis','Recommended Learning / Learning Hub','Competency Profile'].includes(section)&&<CandidateContent section={section}/>}</>
     : role==='employer'
       ? employerLoading?<div className="employer-workspace-state" role="status">Loading your recruiter workspace…</div>
         : employerError?<div className="employer-workspace-state"><p className="employer-form-error" role="alert">{employerError}</p>{employerError.toLowerCase().includes('log in')||employerError.includes('session')?<Link href="/login" className="button primary">Log in</Link>:null}</div>

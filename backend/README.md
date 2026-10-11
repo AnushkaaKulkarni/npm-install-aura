@@ -60,6 +60,8 @@ backend/
 
 The authenticated candidate API at `/api/assistant` stores conversations in MongoDB and scopes every read, write, and delete to the signed-in user. Groq requests run on the backend using `GROQ_API_KEY`. The assistant is instructed to stay within career and employment topics, use only profile facts actually stored for the account, and ask for missing target-role or skill information rather than inventing a gap analysis. It does not query job listings because this project currently has no persisted job-listing model.
 
+The candidate AI Tutor endpoint `POST /api/ai-tutor/sessions` uses the same Groq client and returns a validated structured lesson in English, Hindi, or Marathi for 5, 10, 15, or 20 minutes.
+
 Voice input uses the browser Web Speech recognition API (browser and microphone permission dependent). Spoken replies use the browser's speech synthesis voices; the selected language is also sent to Groq for text replies.
 
 Signup requires contact details and a role-specific profile. New accounts are stored with `verificationStatus: "pending"`; the API does not claim to verify identity or send email until a verification provider is configured.

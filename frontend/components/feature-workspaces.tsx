@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { AudioLines, BarChart3, CheckCircle2, FileText, LoaderCircle, MessageCircle, Mic, MicOff, Play, Plus, Search, Send, Sparkles, Target, Trash2, Volume2, VolumeX, Upload } from 'lucide-react'
+import { AiTutorSetup } from './ai-tutor/AiTutorSetup'
+import { AiTutorSession } from './ai-tutor/AiTutorSession'
+import type { TutorSessionConfig } from '@/lib/ai-tutor/types'
 
-export function FeatureWorkspace({ section }: { section: string }) {
+export function FeatureWorkspace({ section, tutorSession }: { section: string; tutorSession?: TutorSessionConfig }) {
+  if (section === 'AI Tutor') return tutorSession ? <AiTutorSession config={tutorSession}/> : <AiTutorSetup/>
   if (section === 'Interview Preparation') return <InterviewWorkspace />
   if (section === 'AI Career Assistant') return <AssistantWorkspace />
   if (section === 'Resume Studio') return <ResumeWorkspace />
