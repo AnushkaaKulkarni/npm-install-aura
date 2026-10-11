@@ -1,0 +1,25 @@
+{
+  "name": "rozgarlink-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check app.js && node --check config/database.js && node --check controllers/authController.js && node --check controllers/healthController.js && node --check middlewares/authenticate.js && node --check middlewares/authRateLimiter.js && node --check middlewares/errorHandler.js && node --check middlewares/notFoundHandler.js && node --check models/User.js && node --check routes/authRoutes.js && node --check routes/healthRoutes.js && node --check utils/auth.js && node --check utils/corsOptions.js && node --check utils/validateSignup.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.1"
+  }
+}

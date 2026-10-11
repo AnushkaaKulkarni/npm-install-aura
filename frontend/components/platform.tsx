@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, type FormEvent } from 'react'
 import { FeatureWorkspace } from './feature-workspaces'
 import {
   ArrowRight, BarChart3, Bell, BookOpen, BriefcaseBusiness, Building2, Check, CheckCircle2,
@@ -22,7 +23,96 @@ export function PublicHeader() { const [open,setOpen]=useState(false); return <h
 
 export function Landing() { const [query,setQuery]=useState(''); return <div className="public-page"><PublicHeader/><main><section className="hero"><div className="hero-copy"><span className="eyebrow"><Sparkles size={15}/> A smarter path from skills to opportunity</span><h1>Find the Right Opportunity.<br/><em>Build the Skills</em> to Get There.</h1><p>Discover opportunities that match your qualifications, understand your eligibility, identify your skill gaps, and build the skills employers need.</p><div className="search-box"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by job title or skill"/><select aria-label="Location"><option>All India</option><option>Pune</option><option>Bengaluru</option></select><Link href={`/candidate/opportunities${query?`?q=${encodeURIComponent(query)}`:''}`} className="button primary">Search Opportunities</Link></div><div className="hero-actions"><Link href="/signup" className="button primary">Create your free profile <ArrowRight size={16}/></Link><Link href="/candidate/learning" className="button secondary">Explore learning resources</Link></div></div><div className="hero-art"><div className="hero-card"><div className="match-circle">86<small>match</small></div><h3>Skills-first matching</h3><p>Eligibility is checked separately from skill relevance.</p><div className="line green"/><div className="line blue"/><div className="line saffron"/></div><div className="hero-city">भारत · Skills · Opportunities</div></div></section><section className="section centered"><span className="eyebrow">How it works</span><h2>A clearer route to your next opportunity</h2><p className="section-lead">RozgarLink connects what you know, what employers need, and what you can learn next.</p><div className="steps">{[['01','Build your profile','Add your education, experience and skills once.'],['02','See your eligibility','Understand mandatory requirements before applying.'],['03','Close your skill gaps','Learn with resources mapped to your target roles.']].map(([n,t,d])=><div className="step" key={n}><b>{n}</b><h3>{t}</h3><p>{d}</p></div>)}</div></section></main></div> }
 
-export function AuthPage({mode}:{mode:'login'|'signup'}) { const [submitted,setSubmitted]=useState(false); return <div className="auth-page"><PublicHeader/><main className="auth-wrap"><div className="auth-card"><span className="eyebrow">{mode==='login'?'Welcome back':'Start your journey'}</span><h1>{mode==='login'?'Log in to RozgarLink':'Create your RozgarLink profile'}</h1><p>{mode==='login'?'Continue building your path from skills to opportunity.':'One profile for opportunities, learning and career preparation.'}</p>{submitted?<div className="success-state"><CheckCircle2/><h2>{mode==='login'?'Demo login ready':'Account details saved'}</h2><p>This is a clearly labelled demo flow. Choose your workspace to continue.</p><Link href="/select-role" className="button primary">Choose workspace <ArrowRight/></Link></div>:<form onSubmit={e=>{e.preventDefault();setSubmitted(true)}}><label>{mode==='signup'?'Full name':'Email or username'}<input required placeholder={mode==='signup'?'Your full name':'you@example.com'}/></label>{mode==='signup'&&<label>Email<input required type="email" placeholder="you@example.com"/></label>}<label>Password<input required type="password" minLength={6} placeholder="At least 6 characters"/></label>{mode==='signup'&&<label className="check-row"><input type="checkbox" required/> I agree to the terms and privacy policy.</label>}<button className="button primary full">{mode==='login'?'Log in':'Continue to role selection'} <ArrowRight/></button></form>}<p className="auth-switch">{mode==='login'?<>New to RozgarLink? <Link href="/signup">Create an account</Link></>:<>Already have an account? <Link href="/login">Log in</Link></>}</p></div></main></div> }
+type AuthRole = 'candidate'|'employer'|'provider'
+
+const authDestinations:Record<AuthRole,string>={candidate:'/candidate/dashboard',employer:'/employer/dashboard',provider:'/provider/dashboard'}
+const signupRoles=[['candidate','Candidate / Job Seeker','Explore opportunities, show your skills and plan your next step.',Users],['employer','Employer / Recruiter','Publish opportunities and find eligible candidates.',Building2],['provider','Training Provider','Share learning resources that close real skill gaps.',GraduationCap]] as const
+
+export function AuthPage({mode}:{mode:'login'|'signup'}) {
+  const router=useRouter()
+  const [role,setRole]=useState<AuthRole|null>(null)
+  const [loading,setLoading]=useState(false)
+  const [error,setError]=useState('')
+  const [registered,setRegistered]=useState<{role:AuthRole;name:string}|null>(null)
+
+  async function submit(event:FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setLoading(true)
+    const values=new FormData(event.currentTarget)
+    const profile=role==='candidate'
+      ? {location:String(values.get('location')||'').trim(),highestEducation:String(values.get('highestEducation')||'').trim()}
+      : {organizationName:String(values.get('organizationName')||'').trim(),designation:String(values.get('designation')||'').trim(),website:String(values.get('website')||'').trim()}
+    const payload=mode==='login'
+      ? {email:String(values.get('email')||'').trim(),password:String(values.get('password')||'')}
+      : {role,fullName:String(values.get('fullName')||'').trim(),email:String(values.get('email')||'').trim(),phone:String(values.get('phone')||'').trim(),password:String(values.get('password')||''),profile}
+
+    try {
+      const apiUrl=process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/,'')
+      if(!apiUrl) throw new Error('Authentication is not configured. Set NEXT_PUBLIC_API_URL and try again.')
+      const response=await fetch(`${apiUrl}/auth/${mode==='signup'?'signup':'login'}`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body:JSON.stringify(payload),
+      })
+      let result:{error?:string;user?:{role?:AuthRole;fullName?:string;verificationStatus?:string}}
+      try {
+        result=await response.json()
+      } catch {
+        throw new Error('The authentication service returned an invalid response.')
+      }
+      if(!response.ok) {
+        setError(result.error||'We could not complete your request. Please try again.')
+        return
+      }
+      const authenticatedRole=result.user?.role
+      if(!authenticatedRole||!authDestinations[authenticatedRole]) throw new Error('The authentication service returned an invalid account role.')
+      if(mode==='login') {
+        router.replace(authDestinations[authenticatedRole])
+      } else {
+        setRegistered({role:authenticatedRole,name:result.user?.fullName||String(values.get('fullName')||'')})
+      }
+    } catch(error) {
+      setError(error instanceof TypeError?'Unable to reach the authentication service. Check that the backend is running and try again.':error instanceof Error?error.message:'An unexpected authentication error occurred.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isSignup=mode==='signup'
+  return <div className="auth-page"><PublicHeader/><main className="auth-layout">
+    <aside className="auth-aside">
+      <span className="eyebrow"><Sparkles size={15}/> Skills first. Opportunity next.</span>
+      <h1>{isSignup?'Make your next move count.':'Welcome back to your next opportunity.'}</h1>
+      <p>{isSignup?'Create a role-specific profile to connect with the opportunities, people and learning resources that fit your goals.':'Pick up where you left off and keep moving toward work that fits your skills.'}</p>
+      <div className="auth-proof"><span><CheckCircle2 size={17}/> Clear eligibility, not guesswork</span><span><CheckCircle2 size={17}/> Skills matched to real opportunities</span><span><CheckCircle2 size={17}/> Learning paths built around your goals</span></div>
+      <div className="auth-aside-note"><span className="brand-sun">✦</span><span><b>RozgarLink</b><small>Your Skills, Your Opportunities.</small></span></div>
+    </aside>
+    <section className="auth-panel">
+      <div className="auth-card">
+        <span className="eyebrow">{isSignup?'Create your account':'Welcome back'}</span>
+        <h2>{registered?'Your details are saved':isSignup?(role?'Complete your profile':'Who are you joining as?'):'Log in to RozgarLink'}</h2>
+        <p>{registered?'Your profile has been saved and is marked pending verification. You can continue to your workspace.':isSignup?(role?'Add your contact and verification details to get started.':'Choose the stakeholder experience that best fits you.'): 'Continue building your path from skills to opportunity.'}</p>
+        {registered?<div className="success-state"><CheckCircle2/><h3>Account created, {registered.name}</h3><p>Your details were saved securely. Verification is pending.</p><button type="button" className="button primary full" onClick={()=>router.replace(authDestinations[registered.role])}>Go to {registered.role==='provider'?'provider':registered.role} workspace <ArrowRight size={16}/></button></div>:isSignup&&!role?<div className="auth-role-grid">{signupRoles.map(([id,title,description,Icon])=><button type="button" className="auth-role-card" key={id} onClick={()=>setRole(id)}><span className="auth-role-icon"><Icon size={21}/></span><span className="auth-role-copy"><b>{title}</b><small>{description}</small></span><ArrowRight size={17}/></button>)}</div>:<form onSubmit={submit}>
+          {isSignup&&<button type="button" className="auth-back" onClick={()=>{setRole(null);setError('')}}><ArrowRight size={14}/> Change stakeholder</button>}
+          {isSignup&&<label>Full name<input name="fullName" required autoComplete="name" placeholder="Your full name"/></label>}
+          <label>Email address<input name="email" required type="email" autoComplete="email" placeholder="you@example.com"/></label>
+          {isSignup&&<label>Mobile number<input name="phone" required type="tel" autoComplete="tel" minLength={8} maxLength={20} placeholder="+91 98765 43210"/></label>}
+          {isSignup&&role==='candidate'&&<div className="auth-fields-grid"><label>Current location<input name="location" required autoComplete="address-level2" placeholder="City, State"/></label><label>Highest education<input name="highestEducation" required placeholder="e.g. B.Tech in Computer Science"/></label></div>}
+          {isSignup&&role!=='candidate'&&<><label>Organization name<input name="organizationName" required autoComplete="organization" placeholder="Registered organization name"/></label><div className="auth-fields-grid"><label>Your position<input name="designation" required autoComplete="organization-title" placeholder="e.g. HR Manager"/></label><label>Organization website<input name="website" required type="url" placeholder="https://example.com"/></label></div></>}
+          <label>Password<input name="password" required type="password" minLength={8} maxLength={72} autoComplete={isSignup?'new-password':'current-password'} placeholder={isSignup?'8–72 characters':'Your password'}/></label>
+          {isSignup&&<label className="check-row auth-terms"><input name="terms" type="checkbox" required/> I agree to the terms and privacy policy.</label>}
+          {error&&<p className="auth-error" role="alert">{error}</p>}
+          <button className="button primary full auth-submit" disabled={loading}>{loading?'Please wait…':isSignup?'Create account':'Log in'} {!loading&&<ArrowRight size={16}/>}</button>
+        </form>}
+        {registered&&error&&<p className="auth-error" role="alert">{error}</p>}
+        {!registered&&<p className="auth-switch">{isSignup?<>Already have an account? <Link href="/login">Log in</Link></>:<>New to RozgarLink? <Link href="/signup">Create an account</Link></>}</p>}
+      </div>
+      <p className="auth-security"><ShieldCheck size={15}/> Your account details are protected.</p>
+    </section>
+  </main></div>
+}
 
 export function RoleSelect() { const [role,setRole]=useState('candidate'); const roles=[['candidate','Candidate / Job Seeker','Discover opportunities, understand eligibility and prepare for interviews.',Users,'/candidate/dashboard'],['employer','Employer / Recruiter','Publish opportunities and discover eligible candidates.',Building2,'/employer/dashboard'],['provider','Training Provider','Publish learning materials mapped to skills and careers.',GraduationCap,'/provider/dashboard']] as const; return <div className="auth-page"><PublicHeader/><main className="role-wrap"><span className="eyebrow">One platform, three perspectives</span><h1>Choose your workspace</h1><p>Select the experience that best fits what you want to do.</p><div className="role-grid">{roles.map(([id,title,desc,I])=><button className={role===id?'role-card selected':'role-card'} onClick={()=>setRole(id)} key={id}><I/><h2>{title}</h2><p>{desc}</p><span className="radio">{role===id?'Selected':'Select'}</span></button>)}</div><Link href={`/onboarding/profile?role=${role}`} className="button primary">Continue to workspace <ArrowRight/></Link></main></div> }
 
